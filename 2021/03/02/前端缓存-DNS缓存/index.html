@@ -1,0 +1,245 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>前端缓存-DNS缓存 | Blog for my life</title><meta name="author" content="zjwgank"><meta name="copyright" content="zjwgank"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="之前我们提到过当本地缓存不能直接使用时,就需要向服务器(CDN节点)发起请求,但是要发起请求首先就需要建立连接,客户端需要把URL解析成IP,而这个解析的过程中我们也可以做一些文章.不仅操作系统会对DNS缓存,浏览器、应用程序、运营商等都会对DNS进行缓存,不需要我们每次都去根域服务器下查询(递归查询).  DNS查询时,首先会搜索浏览器自身的DNS缓存,如果存在,返回IP地址. 如果浏览器的D">
+<meta property="og:type" content="article">
+<meta property="og:title" content="前端缓存-DNS缓存">
+<meta property="og:url" content="http://zjwgank.github.io/2021/03/02/%E5%89%8D%E7%AB%AF%E7%BC%93%E5%AD%98-DNS%E7%BC%93%E5%AD%98/">
+<meta property="og:site_name" content="Blog for my life">
+<meta property="og:description" content="之前我们提到过当本地缓存不能直接使用时,就需要向服务器(CDN节点)发起请求,但是要发起请求首先就需要建立连接,客户端需要把URL解析成IP,而这个解析的过程中我们也可以做一些文章.不仅操作系统会对DNS缓存,浏览器、应用程序、运营商等都会对DNS进行缓存,不需要我们每次都去根域服务器下查询(递归查询).  DNS查询时,首先会搜索浏览器自身的DNS缓存,如果存在,返回IP地址. 如果浏览器的D">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg">
+<meta property="article:published_time" content="2021-03-02T13:23:23.000Z">
+<meta property="article:modified_time" content="2021-03-02T14:15:54.119Z">
+<meta property="article:author" content="zjwgank">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://zjwgank.github.io/2021/03/02/%E5%89%8D%E7%AB%AF%E7%BC%93%E5%AD%98-DNS%E7%BC%93%E5%AD%98/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  ClickShowText: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2021-03-02 22:15:54'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a></div></div></div><hr/></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">Blog for my life</a></span><div id="menus"><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">前端缓存-DNS缓存</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2021-03-02T13:23:23.000Z" title="发表于 2021-03-02 21:23:23">2021-03-02</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-03-02T14:15:54.119Z" title="更新于 2021-03-02 22:15:54">2021-03-02</time></span></div><div class="meta-secondline"> <span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p><img src="https://gimg2.baidu.com/image_search/src=http%3A%2F%2F5b0988e595225.cdn.sohucs.com%2Fq_70%2Cc_zoom%2Cw_640%2Fimages%2F20180610%2F551df455979544fb89e71fde6cbb1082.jpeg&refer=http%3A%2F%2F5b0988e595225.cdn.sohucs.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=jpeg?sec=1617286525&t=cd16eed4c70f712c6124ec42d25dd6f2" alt="致敬达叔"></p>
+<p>之前我们提到过当本地缓存不能直接使用时,就需要向服务器(CDN节点)发起请求,但是要发起请求首先就需要建立连接,客户端需要把URL解析成IP,而这个解析的过程中我们也可以做一些文章.不仅操作系统会对DNS缓存,浏览器、应用程序、运营商等都会对DNS进行缓存,不需要我们每次都去根域服务器下查询(递归查询).</p>
+<ol>
+<li>DNS查询时,首先会搜索浏览器自身的DNS缓存,如果存在,返回IP地址.</li>
+<li>如果浏览器的DNS缓存查找不到,就会尝试读取操作系统里的host文件,查找是否存在对应的域名IP,如果存在,返回IP地址.</li>
+<li>如果host文件查找不到,那么就会去路由器的DNS缓存里查找,如果找到,返回IP地址</li>
+<li>如果路由器的DNS缓存查找不到,就会尝试去网络供应商的DNS服务器中去查找,如果找到返回IP地址</li>
+<li>如果找不到,就会尝试去根域服务器下找到(递归查询)</li>
+</ol>
+<p>需要注意的是,操作系统的DNS缓存会参考DNS服务器返回的TTL,但是不完全等于TTL.TTL:Time to Live,存活时间.</p>
+<h4 id="注意"><a href="#注意" class="headerlink" title="注意:"></a>注意:</h4><ul>
+<li>浏览器的DNS缓存时间和DNS服务器返回的TTL无关,浏览器在获得域名的实际IP后会对其进行缓存.每种浏览器都有一个固定的DNS缓存时间,其中chrome的过期时间为1分钟,在这个时间里不会重新请求DNS.<code>chrome://net-internals/#dns</code>-查看chrome浏览器dns缓存</li>
+<li>应用程序的DNS缓存由应用程序控制</li>
+<li>操作系统的DNS缓存会参考DNS服务器返回的TTL,但是不完全等于TTL.</li>
+</ul>
+<p>TTL:Time To Live,存活时间.</p>
+<h3 id="DNS"><a href="#DNS" class="headerlink" title="DNS"></a>DNS</h3><p>Domain Name System,因特网上作为域名和IP地址相互映射的一个分布式数据库,能够使用户更方便的访问互联网,而不用去记住能够直接被机器读取的IP数字串.</p>
+<h4 id="DNS解析"><a href="#DNS解析" class="headerlink" title="DNS解析"></a>DNS解析</h4><p>DNS协议提供通过域名查找IP地址或者逆向从IP地址查找域名的服务,而通过域名查找到能够直接被机器解析的IP数字串的过程被称为域名解析,而域名解析的过程分为递归查询和迭代查询.DNS协议运行在UDP协议上,端口号为53.</p>
+<ul>
+<li>递归查询:当DNS服务器不能回应客户端的查询时,会尝试向其他服务器发起查询,一般是向该域名的根域服务器查询,如果根域服务器能够查找到,则返回IP地址,否则根域服务器向它的下级一级一级查询,直到查询到结果返回</li>
+<li>迭代查询:当DNS服务器不能回应客户端的查询时,DNS服务器会把能够解析该域名的其他DNS服务器的IP地址返回给主机,由主机的DNS程序向这些DNS服务器发起查询,直到找到查询结果.</li>
+</ul>
+<h4 id="DNS查询响应类型"><a href="#DNS查询响应类型" class="headerlink" title="DNS查询响应类型"></a>DNS查询响应类型</h4><ul>
+<li>权威答复: 返回给客户端的正向答复,并且设置了DNS消息中的权威位,此答复代表从具有权威的DNS服务器响应</li>
+<li>正向答复: 包含了匹配客户端解析请求的资源记录</li>
+<li>参考答复: 只在迭代查询下返回,包含了其他有助于客户端解析请求的信息</li>
+<li>否定答复: 权威DNS服务器报告客户端查询的名字不存在;权威DNS服务器报告存在对应的名字但是不存在指定类型的资源记录</li>
+</ul>
+<p>无论是正向答复还是否定答复,DNS客户端都会将结果保存在自己本地的缓存.</p>
+<h3 id="IP"><a href="#IP" class="headerlink" title="IP"></a>IP</h3><p>Internet Protocol,即网际协议(互联网协议),适用于报文交换网络的一种面向数据的协议.IP是在TCP/IP协议中网络层的主要协议,任务仅仅是根据源主机和目的主机的地址传送数据.为此目的,IP定义了寻址方法和数据报的封装结构,即IP地址.</p>
+<h4 id="IP地址"><a href="#IP地址" class="headerlink" title="IP地址"></a>IP地址</h4><p>IP地址是IP协议提供的一种统一的地址格式,它为互联网上的每一个网络和每一台主机分配一个逻辑地址,一次来屏蔽物理地址的差异.一个IP地址在整个因特网范围内是唯一的.<br><code>IP地址 = 网络地址(网络号) + 主机地址(主机号)</code><br>网络地址标志着主机所接到的网络,每个网络地址在整个因特网范围必须是唯一的.主机地址标志着主机,每个主机地址在它的网络范围内必须是唯一的.</p>
+<h5 id="IPv4"><a href="#IPv4" class="headerlink" title="IPv4"></a>IPv4</h5><p>IP地址以圆点分隔号的四个十进制数字表示,每个数字从0到255,如<code>192.168.1.1</code><br>IP地址是一个 4 * 8bit(1字节),每个字节由 0/1 组成的数字串(IPv4由32位二进制组),如<code>11000000.10101000.00000001.00000001</code></p>
+<h5 id="IPv6"><a href="#IPv6" class="headerlink" title="IPv6"></a>IPv6</h5><p>IP地址以冒号分隔的8个16进制表示,IPv6地址范围从<code>0000:0000:0000:0000:0000:0000:0000:0000</code>到<code>ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff</code><br>IPv6由128位二进制组成.</p>
+<h4 id="IP地址分类"><a href="#IP地址分类" class="headerlink" title="IP地址分类"></a>IP地址分类</h4><p>IP地址分为五大类: A类、B类、C类、D类和E类.在这五类IP地址中,我们最常用的是A类、B类和C类地址.</p>
+<ul>
+<li>A类地址</li>
+</ul>
+<p>A类地址通常为大型网络而提供,全世界总共有126个A类网络,每个A类网络最多可以链接16777214台主机.<br>第一字节为网路号,其他三个字节为主机号.<br>A类地址的网络号第一位固定为0,只有其余七位可以使用,可以指派的网络号是 2^7 - 2 = 126个,网络号<code>0(00000000)</code>的地址是IP地址的保留地址,意为本网络,网络号<code>127(01111111)</code>的地址是IP地址的保留地址,作为本地环回软件测试.A类地址的网络号取值在于1-126之间<br>A类地址的主机号占3个字节,每个A类网络中的最大主机数是2^24 - 2个,主机号全是0的IP地址表示本主机所连接到的单个网络,主机号全是1的IP地址表示是该网络上的所有主机.</p>
+<ul>
+<li>B类地址</li>
+</ul>
+<p>B类地址适用于中等规模网络,全世界大约有16000个B类网络,每个网络最多可连接65534台主机<br>前两个字节为网络号,后两个字节为主机号<br>B类地址的网络号第一、二位固定为10,网络号只有14位可用,可以指派的网络号是2^14-1个,网络号<code>128.0(10000000.00000000)</code>的IP地址是不指派的.B类地址的网络号取值介于128-191之间<br>B类地址的主机号占2个字节,每个B类网络中的最大主机数是2^16-2个,主机号全是0的IP地址表示本主机所连接的单个网络,主机号全是1的IP地址表示该网络上的所有主机</p>
+<ul>
+<li>C类地址</li>
+</ul>
+<p>C类地址适用于校园网等小型网络,每个C类网络最多可连接254台主机<br>前三个字节为网络号,最后一个字节为主机号<br>C类地址的网络号第一、二、三位固定为110,网络号有21位可以使用,可以指派的网络号为2^21-1个,网络号为<code>192.0.0(11000000.00000000.00000000)</code>的IP地址是不指派的.C类地址的网络号取值介于192-223之间.<br>C类地址的主机号占一个字节,每个C类网络中最大的主机个数为2^8-2个.主机号全是0的IP地址表示本主机所连接到的单个网络,主机号全是1的IP地址表示是该网络上的所有主机.</p>
+<h3 id="子网掩码"><a href="#子网掩码" class="headerlink" title="子网掩码"></a>子网掩码</h3><p>Subnet Mask,网络掩码(地址掩码),是一个4 * 8bit(1字节),每个字节由 0/1 组成的数字串<br>它的作用是屏蔽IP地址的一部分来划分网络地址和主机地址两部分,并说明该IP地址是在局域网上还是远程网上<br>通过子网掩码可以把网络划分为子网,即VLSM(可变长子网掩码),也可以把小的网络归并成大的网络即超网.<br>子网掩码不能单独存在,它必须结合IP地址一起使用.对于A类地址来说,默认的子网掩码是255.0.0.0;对于B类地址来说,默认的子网掩码是255.255.0.0;对于C类地址来说默认的子网掩码是255.255.255.0;</p>
+<h4 id="使用规则"><a href="#使用规则" class="headerlink" title="使用规则"></a>使用规则</h4><table>
+<thead>
+<tr>
+<th></th>
+<th>10进制</th>
+<th>2进制</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>IP地址</td>
+<td>192.168.1.1</td>
+<td>11000000.10101000.00000001.00000001</td>
+</tr>
+<tr>
+<td>子网掩码</td>
+<td>255.255.255.0</td>
+<td>11111111.11111111.11111111.00000000</td>
+</tr>
+</tbody></table>
+<ul>
+<li>网络地址: 二进制IP地址中 被二进制子网掩码连续的1 遮住的部分,即 <code>11000000.10101000.00000001.00000000</code>=&gt; 192.168.1.0.同一网络不是指物理连接,而是指网络地址,只有在同一个网络地址下才能够通信.</li>
+<li>主机地址: 二进制IP地址中 被二进制子网掩码连续的0 遮住的部分,即 <code>00000000.000000000.00000000.00000001</code> =&gt; 0.0.0.1</li>
+<li>广播地址: 将网络地址的主机位全部转换为1,就是广播地址,即<code>11000000.10101000.00000001.11111111</code> =&gt; 192.168.1.225.专门用于同时向网络中所有工作站进行发送的一个地址.</li>
+</ul>
+<h4 id="子网"><a href="#子网" class="headerlink" title="子网"></a>子网</h4><p>基于每类IP网络可以进一步划分更小的网络,这就是子网,每个子网由路由器界定并分配一个新的子网网络地址,子网地址是基于每类的网络地址的主机部分创建的.<br>通过子网掩码计算子网个数及每个子网中可使用的主机地址个数:</p>
+<blockquote>
+<p>若要把 <strong><em>.</em></strong>.<strong><em>.0/m(子网掩码1个数)划分为</em></strong>.<strong><em>.</em></strong>.0/n (m&lt;n&lt;32),得到的子网个数2^(n-m),去掉全0和全1,可用子网个数2^(n-m) - 2,每个子网可用的主机地址为2^(32-n) - 2;</p>
+</blockquote>
+<h3 id="网关"><a href="#网关" class="headerlink" title="网关"></a>网关</h3><p>连接两个不同的网络的设备都可以叫网关设备,网关的作用就是实现两个网络之间的进行通讯和控制.<br>网关设备可以是交换机、路由器、启用路由协议的服务器、代理服务器、防火墙等.<br>网关地址就是网关设备的IP地址.<br>要实现两个网络之间的通信,必须通过网关.不配网关和DNS可以在同一网段的局域网内进行通信,只有配了网关和DNS才可以上网.<br>一台主机可以有多个网关,当主机找不到可用网关时,会把数据包发给默认指定的网关,有这个网关来处理数据包.现在主机使用的网关一般是默认网关.</p>
+<h4 id="DHCP-Dynamic-Host-Configuration-Protocol-动态主机配置协议"><a href="#DHCP-Dynamic-Host-Configuration-Protocol-动态主机配置协议" class="headerlink" title="DHCP(Dynamic Host Configuration Protocol,动态主机配置协议)"></a>DHCP(Dynamic Host Configuration Protocol,动态主机配置协议)</h4><p>服务器自动给网络中的计算机分配IP地址、子网掩码和默认网关.<br>一旦网络的默认网关发生变化时,只要更改了DHCP服务器中默认网关的设置,那么网络中所有的计算机均获得新的默认网关的IP地址.</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">zjwgank</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://zjwgank.github.io/2021/03/02/%E5%89%8D%E7%AB%AF%E7%BC%93%E5%AD%98-DNS%E7%BC%93%E5%AD%98/">http://zjwgank.github.io/2021/03/02/%E5%89%8D%E7%AB%AF%E7%BC%93%E5%AD%98-DNS%E7%BC%93%E5%AD%98/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://zjwgank.github.io" target="_blank">Blog for my life</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"></div><div class="post_share"><div class="social-share" data-image="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2021/03/01/%E5%89%8D%E7%AB%AF%E7%BC%93%E5%AD%98-CDN%E7%BC%93%E5%AD%98/"><img class="next-cover" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">前端缓存-CDN缓存</div></div></a></div></nav></div><div class="aside_content" id="aside_content"><div class="card-widget card-info"><div class="card-content"><div class="card-info-avatar is-center"><img class="avatar-img" src="/null" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">zjwgank</div><div class="author-info__description">life work study</div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a></div></div><div class="card-widget card-announcement"><div class="card-content"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%B3%A8%E6%84%8F"><span class="toc-number">1.</span> <span class="toc-text">注意:</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DNS"><span class="toc-number"></span> <span class="toc-text">DNS</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#DNS%E8%A7%A3%E6%9E%90"><span class="toc-number">1.</span> <span class="toc-text">DNS解析</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#DNS%E6%9F%A5%E8%AF%A2%E5%93%8D%E5%BA%94%E7%B1%BB%E5%9E%8B"><span class="toc-number">2.</span> <span class="toc-text">DNS查询响应类型</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#IP"><span class="toc-number"></span> <span class="toc-text">IP</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#IP%E5%9C%B0%E5%9D%80"><span class="toc-number">1.</span> <span class="toc-text">IP地址</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#IPv4"><span class="toc-number">1.1.</span> <span class="toc-text">IPv4</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#IPv6"><span class="toc-number">1.2.</span> <span class="toc-text">IPv6</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#IP%E5%9C%B0%E5%9D%80%E5%88%86%E7%B1%BB"><span class="toc-number">2.</span> <span class="toc-text">IP地址分类</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AD%90%E7%BD%91%E6%8E%A9%E7%A0%81"><span class="toc-number"></span> <span class="toc-text">子网掩码</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%BD%BF%E7%94%A8%E8%A7%84%E5%88%99"><span class="toc-number">1.</span> <span class="toc-text">使用规则</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%AD%90%E7%BD%91"><span class="toc-number">2.</span> <span class="toc-text">子网</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BD%91%E5%85%B3"><span class="toc-number"></span> <span class="toc-text">网关</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#DHCP-Dynamic-Host-Configuration-Protocol-%E5%8A%A8%E6%80%81%E4%B8%BB%E6%9C%BA%E9%85%8D%E7%BD%AE%E5%8D%8F%E8%AE%AE"><span class="toc-number">1.</span> <span class="toc-text">DHCP(Dynamic Host Configuration Protocol,动态主机配置协议)</span></a></li></ol></div></div></div><div class="card-widget card-recent-post"><div class="card-content"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2021/03/02/%E5%89%8D%E7%AB%AF%E7%BC%93%E5%AD%98-DNS%E7%BC%93%E5%AD%98/" title="前端缓存-DNS缓存"><img src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="前端缓存-DNS缓存"/></a><div class="content"><a class="title" href="/2021/03/02/%E5%89%8D%E7%AB%AF%E7%BC%93%E5%AD%98-DNS%E7%BC%93%E5%AD%98/" title="前端缓存-DNS缓存">前端缓存-DNS缓存</a><time datetime="2021-03-02T13:23:23.000Z" title="发表于 2021-03-02 21:23:23">2021-03-02</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/03/01/%E5%89%8D%E7%AB%AF%E7%BC%93%E5%AD%98-CDN%E7%BC%93%E5%AD%98/" title="前端缓存-CDN缓存"><img src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="前端缓存-CDN缓存"/></a><div class="content"><a class="title" href="/2021/03/01/%E5%89%8D%E7%AB%AF%E7%BC%93%E5%AD%98-CDN%E7%BC%93%E5%AD%98/" title="前端缓存-CDN缓存">前端缓存-CDN缓存</a><time datetime="2021-03-01T13:09:09.000Z" title="发表于 2021-03-01 21:09:09">2021-03-01</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/02/27/%E5%89%8D%E7%AB%AF%E7%BC%93%E5%AD%98-%E6%B5%8F%E8%A7%88%E5%99%A8%E7%BC%93%E5%AD%98/" title="前端缓存-浏览器缓存"><img src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="前端缓存-浏览器缓存"/></a><div class="content"><a class="title" href="/2021/02/27/%E5%89%8D%E7%AB%AF%E7%BC%93%E5%AD%98-%E6%B5%8F%E8%A7%88%E5%99%A8%E7%BC%93%E5%AD%98/" title="前端缓存-浏览器缓存">前端缓存-浏览器缓存</a><time datetime="2021-02-27T11:47:15.000Z" title="发表于 2021-02-27 19:47:15">2021-02-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/02/23/%E5%89%8D%E7%AB%AF%E7%BC%93%E5%AD%98-%E6%9C%AC%E5%9C%B0%E7%BC%93%E5%AD%98/" title="前端缓存-本地缓存"><img src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="前端缓存-本地缓存"/></a><div class="content"><a class="title" href="/2021/02/23/%E5%89%8D%E7%AB%AF%E7%BC%93%E5%AD%98-%E6%9C%AC%E5%9C%B0%E7%BC%93%E5%AD%98/" title="前端缓存-本地缓存">前端缓存-本地缓存</a><time datetime="2021-02-23T15:58:55.000Z" title="发表于 2021-02-23 23:58:55">2021-02-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/02/19/%E4%BB%8Eurl%E8%BE%93%E5%85%A5%E5%88%B0%E8%BF%94%E5%9B%9E%E8%AF%B7%E6%B1%82/" title="从url输入到返回请求"><img src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从url输入到返回请求"/></a><div class="content"><a class="title" href="/2021/02/19/%E4%BB%8Eurl%E8%BE%93%E5%85%A5%E5%88%B0%E8%BF%94%E5%9B%9E%E8%AF%B7%E6%B1%82/" title="从url输入到返回请求">从url输入到返回请求</a><time datetime="2021-02-19T14:22:59.000Z" title="发表于 2021-02-19 22:22:59">2021-02-19</time></div></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By zjwgank</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></div></body></html>
