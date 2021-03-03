@@ -7,7 +7,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg">
 <meta property="article:published_time" content="2021-03-02T13:23:23.000Z">
-<meta property="article:modified_time" content="2021-03-02T14:15:54.119Z">
+<meta property="article:modified_time" content="2021-03-03T14:29:19.030Z">
 <meta property="article:author" content="zjwgank">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://zjwgank.github.io/2021/03/02/%E5%89%8D%E7%AB%AF%E7%BC%93%E5%AD%98-DNS%E7%BC%93%E5%AD%98/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>var GLOBAL_CONFIG = { 
@@ -100,7 +100,7 @@ const getScript = url => new Promise((resolve, reject) => {
   isHome: false,
   isHighlightShrink: false,
   isToc: true,
-  postUpdate: '2021-03-02 22:15:54'
+  postUpdate: '2021-03-03 22:29:19'
 }</script><noscript><style type="text/css">
   #nav {
     opacity: 1
@@ -165,7 +165,7 @@ if (asideStatus !== undefined) {
    } else {
      document.documentElement.classList.remove('hide-aside')
    }
-}})()</script><meta name="generator" content="Hexo 5.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a></div></div></div><hr/></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">Blog for my life</a></span><div id="menus"><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">前端缓存-DNS缓存</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2021-03-02T13:23:23.000Z" title="发表于 2021-03-02 21:23:23">2021-03-02</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-03-02T14:15:54.119Z" title="更新于 2021-03-02 22:15:54">2021-03-02</time></span></div><div class="meta-secondline"> <span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p><img src="https://gimg2.baidu.com/image_search/src=http%3A%2F%2F5b0988e595225.cdn.sohucs.com%2Fq_70%2Cc_zoom%2Cw_640%2Fimages%2F20180610%2F551df455979544fb89e71fde6cbb1082.jpeg&refer=http%3A%2F%2F5b0988e595225.cdn.sohucs.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=jpeg?sec=1617286525&t=cd16eed4c70f712c6124ec42d25dd6f2" alt="致敬达叔"></p>
+}})()</script><meta name="generator" content="Hexo 5.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a></div></div></div><hr/></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">Blog for my life</a></span><div id="menus"><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">前端缓存-DNS缓存</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2021-03-02T13:23:23.000Z" title="发表于 2021-03-02 21:23:23">2021-03-02</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-03-03T14:29:19.030Z" title="更新于 2021-03-03 22:29:19">2021-03-03</time></span></div><div class="meta-secondline"> <span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p><img src="https://gimg2.baidu.com/image_search/src=http%3A%2F%2F5b0988e595225.cdn.sohucs.com%2Fq_70%2Cc_zoom%2Cw_640%2Fimages%2F20180610%2F551df455979544fb89e71fde6cbb1082.jpeg&refer=http%3A%2F%2F5b0988e595225.cdn.sohucs.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=jpeg?sec=1617286525&t=cd16eed4c70f712c6124ec42d25dd6f2" alt="致敬达叔"></p>
 <p>之前我们提到过当本地缓存不能直接使用时,就需要向服务器(CDN节点)发起请求,但是要发起请求首先就需要建立连接,客户端需要把URL解析成IP,而这个解析的过程中我们也可以做一些文章.不仅操作系统会对DNS缓存,浏览器、应用程序、运营商等都会对DNS进行缓存,不需要我们每次都去根域服务器下查询(递归查询).</p>
 <ol>
 <li>DNS查询时,首先会搜索浏览器自身的DNS缓存,如果存在,返回IP地址.</li>
@@ -182,10 +182,14 @@ if (asideStatus !== undefined) {
 </ul>
 <p>TTL:Time To Live,存活时间.</p>
 <h3 id="DNS"><a href="#DNS" class="headerlink" title="DNS"></a>DNS</h3><p>Domain Name System,因特网上作为域名和IP地址相互映射的一个分布式数据库,能够使用户更方便的访问互联网,而不用去记住能够直接被机器读取的IP数字串.</p>
-<h4 id="DNS解析"><a href="#DNS解析" class="headerlink" title="DNS解析"></a>DNS解析</h4><p>DNS协议提供通过域名查找IP地址或者逆向从IP地址查找域名的服务,而通过域名查找到能够直接被机器解析的IP数字串的过程被称为域名解析,而域名解析的过程分为递归查询和迭代查询.DNS协议运行在UDP协议上,端口号为53.</p>
+<h4 id="DNS解析"><a href="#DNS解析" class="headerlink" title="DNS解析"></a>DNS解析</h4><p>DNS协议提供通过域名查找IP地址或者逆向从IP地址查找域名的服务,而通过域名查找到能够直接被机器解析的IP数字串的过程被称为域名解析,而域名解析的过程分为递归查询和迭代查询.DNS协议运行在UDP协议上,端口号为53.<br>114.114.114.114 和 8.8.8.8,这两个IP地址都属于公共域名解析服务DNS中的一部分,而且由于不是用于商业用途,这两个DNS都很纯净,不用担心因ISP运行商导致的DNS劫持等问题,而且都是免费提供给用户使用.</p>
 <ul>
 <li>递归查询:当DNS服务器不能回应客户端的查询时,会尝试向其他服务器发起查询,一般是向该域名的根域服务器查询,如果根域服务器能够查找到,则返回IP地址,否则根域服务器向它的下级一级一级查询,直到查询到结果返回</li>
 <li>迭代查询:当DNS服务器不能回应客户端的查询时,DNS服务器会把能够解析该域名的其他DNS服务器的IP地址返回给主机,由主机的DNS程序向这些DNS服务器发起查询,直到找到查询结果.</li>
+<li>114.114.114.114: 国内移动、电信和联通通用的DNS,移动端和PC端都可以使用,干净无广告,解析成功率相对较高,速度快、稳定,适用于国内的用户</li>
+<li>8.8.8.8:Google提供的DNS,全球通用,适用于国外以及访问国外网站的用户使用</li>
+<li>DNS劫持:在DNS服务器中,将你访问域名的IP进行变化,解析得出的IP与原域名不对应</li>
+<li>HTTP劫持:域名解析返回正确的IP,但是在和服务器交互的时候,劫持请求,在服务端响应之前响应请求.</li>
 </ul>
 <h4 id="DNS查询响应类型"><a href="#DNS查询响应类型" class="headerlink" title="DNS查询响应类型"></a>DNS查询响应类型</h4><ul>
 <li>权威答复: 返回给客户端的正向答复,并且设置了DNS消息中的权威位,此答复代表从具有权威的DNS服务器响应</li>
