@@ -23,10 +23,10 @@ JS代码在引擎中是以“一段一段”的方式来分析执行的,而并�
 - 作用域链: 规定了如何查找变量,确定了当前执行上下文对变量对象的访问权限.当查找变量的时候,会先从当前上下文的变量对象查找,如果没有找到,就会从父级(词法层面上的父级)执行上下文的变量对象查找,一直到全局上下文的变量对象,这样由多个执行上下文的变量对象构成的链表就叫做作用域链.
   - 词法环境由环境记录(存储变量--let/const和函数声明的实际位置)和对外部环境的引用(可以访问其他词法外部环境)组成.词法环境分为:全局环境和函数环境.全局环境是一个没有外部环境的词法环境,其外部环境引用为null,拥有一个全局对象及其关联的方法和属性以及用户自定义的全局变量;函数环境:用户在函数中定义的变量被存储在环境记录,包含`arguments`对象,对外部环境的引用可以是全局环境也可以是包含函数的外部函数环境.
   - 变量环境也是一个词法环境,具有词法环境的所有属性,只不过存储的变量时通过`var`绑定的.
-- this的绑定:
-  - 在全局运行,函数内部的`this`直接绑定到全局
-  - 通过对象调用,函数内部的`this`直接绑定到调用它的对象上.如果独立调用,那么该函数内部的`this`指向`undefined`,非严格模式下当`this`指向`undefined`时,它会自动指向全局对象.
-  - 从一个环境传入两一个环境,通过`call`和`apply`,改变`this`指向
+- this的绑定(this永远指向最后调用它的那个对象):
+  - 在全局运行,函数内部的`this`直接绑定到全局.
+  - 通过对象调用,函数内部的`this`直接绑定到调用它的对象上.如果独立调用,那么该函数内部的`this`指向`undefined`,非严格模式下当`this`指向`undefined`时,它会自动指向全局对象.(如果函数没有对象调用,那么默认它的调用对象为`undefined`)
+  - 从一个环境传入另一个环境,通过`call`和`apply`,改变`this`指向
   - 箭头函数不绑定`this`,永远指向定义函数时`this`而不是执行时,如果箭头函数被非箭头函数包含,那么`this`指向的时最近一层非箭头函数的`this`,否则为`undefined`
   - 匿名函数的`this`永远指向`window`
   - new绑定,new的过程: 创建一个空对象;将这个空对象的隐士原型指向构造函数的显示原型;使用call改变`this`指向;如果没有返回值或者返回一个非对象,那么就返回一个obj,如果返回值是一个新对象,那么直接返回该对象.
@@ -36,6 +36,94 @@ JS代码在引擎中是以“一段一段”的方式来分析执行的,而并�
   const res = myFunc.call(this,args)
   return typeof res === 'Object' ? res : obj
   ```
+
+  示例1
+  ```
+  var name = 'windowName';
+  function a () {
+    var name = 'cherry';
+    console.log(this.name);
+    console.log('inner ====' + this)
+  }
+  a()
+  console.log('outer======' + this)
+  ```
+  1. 创建全局执行上下文,推入执行栈
+  2. 创建全局变量对象,定义函数`a`和变量`name`,`this`指向全局`window`
+  3. 顺序执行,变量对象变为活动对象,为`name`赋值为`windowName`;执行函数`a`
+  4. 创建`a`函数执行上下文,推入执行栈,创建函数变量对象,定义变量`name`,`this`指向调用它的对象`undefined -> 严格模式下报错,非严格模式下window`
+  5. 函数变量对象转为活动对象,为`name`赋值为`cherry`,执行`log输出this.name=>windowName`,执行`log输出this=> window`
+  6. 函数执行完毕,函数执行上下文出栈,全局变量对象转为活动对象
+  7. 全局执行上下文,执行`log输出this`
+
+
+示例2
+
+```
+var name = 'windoName';
+a()
+function a () {
+  console.log('name-----' + name);
+  console.log('this name ----' + this.name)
+  console.log('this ----' + this)
+}
+var  obj = {
+  fn:a
+}
+obj.fn()
+var b = obj.fn
+b()
+```
+
+1. 创建全局执行上下文,推入执行栈
+2. 创建全局变量对象,定义变量`name、obj、b`、函数`a`,`this`指向全局对象`window`
+3. 顺序执行,变量对象转为活动对象,为`name`赋值为`windowName`,执行函数`a`
+4. 创建a函数执行上下文,创建函数变量对象,没有要定义的属性,`this`指向全局对象`window`
+5. 变量对象转为活动对象,执行`log(name ==> windowName)`,因变量对象没有`name`,向父级执行上下文(这里是全局执行上下文)查找`name`,执行`log(this.name ==> windowName)`,执行`log(this => window)`
+6. 函数a执行完成,出栈,全局变量对象转为活动对象,为`obj`赋值
+7. 执行`obj.fn()`,创建`fn`的函数执行上下文,推入执行栈,创建函数变量对象,`this`指向调用它的对象`obj`
+8. 顺序执行,`log(name ==> windowName)同上`,执行`log(this.name ==> undefined)`,执行`log(this => obj)`
+9. 执行完毕,出栈
+10. 进入全局执行上下文,为`b`赋值为`obj.fn`
+11. 执行b,创建b函数执行上下文,同上4、5
+
+示例3
+```
+var name = 'windowName'
+
+var obj = {
+  name: 'cherry',
+  func1:function(){
+    console.log(this.name,'----this.name')
+  },
+  fun2:function(){
+    setTimeout(function(){
+      this.func1()
+    },100)
+  },
+  fun3:function(){
+    setTimeout(() => {
+      this.func1()
+    },100)
+  },
+  fun4:function(){
+    setTimeout(function() {
+      this.func1()
+    }.call(obj),100)
+  }
+}
+obj.fun2()
+obj.fun3()
+obj.fun4()
+```
+1. 创建全局执行上下文,推入执行栈,创建全局变量对象,定义变量`name、obj`,`this`指向`window`
+2. 顺序执行,为`name、obj`赋值,执行`obj.fun2()`
+3. 创建函数执行上下文,推入执行栈,创建函数变量对象,`this`指向`obj`
+4. 执行`setTimeout`,执行匿名函数,创建函数执行上下文,推入执行栈,创建函数变量对象,`this`指向`window`,执行`this.func1()`,因查找不到报错,出栈
+5. `obj.fun2`执行结束,函数执行上下文出栈,执行`obj.fun3`,创建函数执行上下文推入执行栈,创建函数变量对象,`this`指向`obj`
+6. 执行`setTimeout`,匿名箭头函数,创建函数执行上下文,推入执行栈,创建函数变量对象,`this`指向`obj`
+7. 执行`this.func1`,创建func1函数指向上下文,推入执行栈,`log(this.name => cherry)`,执行完毕,依次出栈
+8. 执行`obj.fun4`,步骤同上,因指向`call`操作`this`指向`obj`,执行`this.func1()`
 
 `call`和`apply`将`this`绑定到它的第一个参数上,如果第一个参数不是对象,那么JS会将其强制转化为对象,如果第一个参数为`null`或者`undefined`,非严格模式下自动指向全局对象.`call`和`apply`不同的传递给它的执行参数一个是字符串一个是数组,但是都会得到一个立即执行的函数.
 `bind`则会生成一个新的函数且这个函数的`this`永远绑定到`bind`的第一个参数上.由于箭头函数没有自己的`this`指向,使用`call`、`apply`、`bind`时只能传递参数不能改变`this`指向,第一个参数会被忽略.
