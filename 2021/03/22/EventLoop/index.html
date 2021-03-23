@@ -1,0 +1,243 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EventLoop | Blog for my life</title><meta name="author" content="zjwgank"><meta name="copyright" content="zjwgank"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="JS是单线程的作为浏览器的脚本语言,JS的主要用途就是操作DOM,以及与用户交互.这就决定了它只能是单线程的.否则会带来很复杂的同步问题.比如JS同时有两个线程,一个线程要在某个DOM节点上添加内容,而另一个线程要删除这个DOM节点,那么浏览器以哪个为准呢.因此JS必须是单线程的,它在同一时间只能做一件事. Web Worker(html5新特性)Web Worker为JS创建多线程环境,允许主线">
+<meta property="og:type" content="article">
+<meta property="og:title" content="EventLoop">
+<meta property="og:url" content="http://zjwgank.github.io/2021/03/22/EventLoop/">
+<meta property="og:site_name" content="Blog for my life">
+<meta property="og:description" content="JS是单线程的作为浏览器的脚本语言,JS的主要用途就是操作DOM,以及与用户交互.这就决定了它只能是单线程的.否则会带来很复杂的同步问题.比如JS同时有两个线程,一个线程要在某个DOM节点上添加内容,而另一个线程要删除这个DOM节点,那么浏览器以哪个为准呢.因此JS必须是单线程的,它在同一时间只能做一件事. Web Worker(html5新特性)Web Worker为JS创建多线程环境,允许主线">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg">
+<meta property="article:published_time" content="2021-03-22T14:18:10.000Z">
+<meta property="article:modified_time" content="2021-03-23T16:16:59.192Z">
+<meta property="article:author" content="zjwgank">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://zjwgank.github.io/2021/03/22/EventLoop/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  ClickShowText: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2021-03-24 00:16:59'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">11</div></a></div></div></div><hr/></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">Blog for my life</a></span><div id="menus"><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">EventLoop</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2021-03-22T14:18:10.000Z" title="发表于 2021-03-22 22:18:10">2021-03-22</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-03-23T16:16:59.192Z" title="更新于 2021-03-24 00:16:59">2021-03-24</time></span></div><div class="meta-secondline"> <span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h3 id="JS是单线程的"><a href="#JS是单线程的" class="headerlink" title="JS是单线程的"></a>JS是单线程的</h3><p>作为浏览器的脚本语言,JS的主要用途就是操作DOM,以及与用户交互.这就决定了它只能是单线程的.否则会带来很复杂的同步问题.比如JS同时有两个线程,一个线程要在某个DOM节点上添加内容,而另一个线程要删除这个DOM节点,那么浏览器以哪个为准呢.因此JS必须是单线程的,它在同一时间只能做一件事.</p>
+<h4 id="Web-Worker-html5新特性"><a href="#Web-Worker-html5新特性" class="headerlink" title="Web Worker(html5新特性)"></a>Web Worker(html5新特性)</h4><p><code>Web Worker</code>为JS创建多线程环境,允许主线程创建<code>Worker</code>线程,将一些任务分配给后者运行.在主线程运行的同时,<code>Worker</code>线程在后台运行,互不干扰,等到<code>Worker</code>线程完成运行,再把结果返回给主线程.但是<code>Worker</code>线程一旦新建成功,就会始终运行(不会被主线程的活动打断),会带来资源上的巨大消耗,因此当<code>Worker</code>对任务计算结束,就应该关闭.</p>
+<ul>
+<li>同源限制: 分配给<code>Worker</code>线程的脚本文件,必须与主线程脚本文件同源</li>
+<li>文件限制: <code>worker</code>线程不能读取本地文件,只能执行同源脚本</li>
+<li>DOM限制: <code>worker</code>线程无法操作DOM</li>
+<li>通信限制: 主线程和<code>worker</code>线程不在同一个执行上下文,不能直接通信,需要通过消息完成</li>
+<li>脚本限制: <code>Worker</code>线程不能执行<code>alert</code>和<code>confirm</code>,但是可以调用<code>XMLHttpRequest</code></li>
+</ul>
+<h4 id="Service-Worker"><a href="#Service-Worker" class="headerlink" title="Service Worker"></a>Service Worker</h4><p><code>Service Worker</code>基于<code>Web Worker</code>,并在<code>Web Worker</code>上添加了离线缓存能力,它是一个服务器与浏览器的中间人(代理服务器)的角色,如果网站注册了<code>Service Worker</code>,那么就可以拦截当前网站的所有请求,进行管理(开发者自己编程判断)是否使用缓存或者发起请求.<br><code>Promises</code>是一种非常适用于异步操作的机制,一个操作依赖于另一个操作的成功执行.这是<code>Service Worker</code>的核心工作机制.</p>
+<h3 id="Event-Loop"><a href="#Event-Loop" class="headerlink" title="Event Loop"></a>Event Loop</h3><h4 id="浏览器"><a href="#浏览器" class="headerlink" title="浏览器"></a>浏览器</h4><p>JS是单线程的,它在同一时间只能做一件事,那么这就意味着:前一个任务结束才能执行后一个任务.如果前一个任务(比如I/O、AJAX、回调函数)耗时很久,那么下一个任务就必须等待.如果因为计算量比较大,占用的CPU比较多(复杂的逻辑或者DOM渲染),还可以理解,但是如果只是简单的I/O那么我们就要考虑为什么不把这样的任务挂起,等到I/O操作完毕再执行呢.因此所有的任务又分为:同步任务和异步任务.</p>
+<ul>
+<li>同步任务(synchronous):在主线程上排队执行的任务,只有前一个执行完毕,才会执行下一个任务</li>
+<li>异步任务(asynchronous):不进入主线程,进入任务队列(task queue)的任务,只有任务队列通知主线程某个任务可以执行了,该任务才会进入主线程执行.</li>
+<li>任务队列(task queue):一个事件队列,先进先出的数据结构,当异步任务完成,就会在队列中添加一个事件,表示相关的异步任务可以进入执行栈.排在前面的事件优先被主线程读取,读取的过程是自动的,当执行栈清空,任务队列的上的第一位事件就会自动进入主线程.主线程读取任务队列,其实就是读取里面的事件.<ul>
+<li>I/O任务完成,在任务队列中添加一个事件</li>
+<li>自定义事件(鼠标事件、ajax等)的回调函数,当触发交互动作,回调函数在任务队列中添加一个事件</li>
+<li>定时器(setTimeout/setInterval):向任务队列尾部添加定时事件,主线程检查执行时间,到达时间后,事件进入主线程.<code>setTimeout(callback,time)</code>在<code>time</code>毫秒后执行<code>callback</code>,指定任务在主线程最早可得的空闲时间执行,只执行一次,当<code>time</code>为0时表示当前执行栈清空立即执行<code>callback</code>.<code>setInterval(callback,time)</code>在<code>time</code>毫秒后执行<code>callback</code>,重复执行多次.html5规定<code>setTimeout</code>的<code>time</code>不得低于4毫秒,老版本浏览器规定不得低于10毫秒,而对于dom操作通常是16毫秒执行一次(requestAnimationFrmae &gt; setTimeout).</li>
+</ul>
+</li>
+</ul>
+<p>执行栈中的同步任务总是在任务队列中的异步任务前执行.</p>
+<h4 id="Node"><a href="#Node" class="headerlink" title="Node"></a>Node</h4><p><img src="https://www.ruanyifeng.com/blogimg/asset/2014/bg2014100803.png" alt="Node"></p>
+<blockquote>
+<ol>
+<li>V8引起解析JS脚本</li>
+<li>解析后的代码调用Node API</li>
+<li>libuv库负责Node API的执行,它将不同的任务分配给不同的线程,形成Event Loop,以异步的方式将任务的执行结果返回给V8引擎</li>
+<li>V8引擎将结果返回给用户</li>
+</ol>
+</blockquote>
+<p>Node中Event Loop分为6个阶段</p>
+<ol>
+<li>timers:执行<code>setTimeout</code>和<code>setInterval</code>中到期的<code>callback</code></li>
+<li>pending callback: 上一轮循环中少数的<code>callback</code>会在这一阶段执行</li>
+<li>idle,prepare:仅在内部使用</li>
+<li>poll:最重要的阶段,执行<code>pending callback</code>,在适当的情况下会阻塞在这个阶段</li>
+<li>check: 执行<code>setImmediate</code>的<code>callback</code></li>
+<li>close callback: 执行<code>close</code>事件的<code>callback</code></li>
+</ol>
+<ul>
+<li><code>process.nextTick</code>:在当前执行栈尾部,下一次Event Loop之前触发回调函数,它指定的任务总是发生在所有异步任务之前(process.nextTick &gt; Promise)</li>
+<li><code>setImmediate</code>:在当前任务队列尾部添加事件,指定的任务总是在下一次Event Loop时执行.(setImmediate &gt; setTimeout)</li>
+</ul>
+<p>多个<code>process.nextTick</code>总是在当前执行栈一次执行完,多个<code>setImmediate</code>可能需要多次loop才能执行完成.</p>
+<h4 id="Event-Loop-1"><a href="#Event-Loop-1" class="headerlink" title="Event Loop"></a>Event Loop</h4><ol>
+<li>所有的同步任务都在主线程中执行,形成一个执行栈(当函数开始执行,形成一个执行上下文,推入执行栈)</li>
+<li>主线程之外有一个“任务队列”,只要异步任务有了运行结果,就在“任务队列”中放置一个事件</li>
+<li>一旦执行栈中的所有同步任务执行完毕,系统就会读取“任务队列”,看看有哪些事件,那么对应的异步任务,结束等待状态,进入执行栈,开始执行</li>
+<li>主线程不断重复以上三个步骤</li>
+</ol>
+<p>以上当主线程空了就去读取“任务队列”的事件这个循环的运行机制,就是Event Loop.</p>
+<h3 id="宏任务和微任务"><a href="#宏任务和微任务" class="headerlink" title="宏任务和微任务"></a>宏任务和微任务</h3><p><img src="https://upload-images.jianshu.io/upload_images/25750-50b8dfd7f560fe04" alt="浏览器"></p>
+<ol>
+<li>执行全局JS,全局JS作为全局任务,属于一个宏任务,其中的同步任务推入执行栈,异步任务中的宏任务进入任务队列,微任务进入微任务队列</li>
+<li>执行栈清空,执行微任务队列的微任务</li>
+<li>微任务队列清空,读取任务队列的宏任务到执行栈中</li>
+<li>循环执行步骤2、3</li>
+</ol>
+<h4 id="宏任务"><a href="#宏任务" class="headerlink" title="宏任务"></a>宏任务</h4><p>一般消息队列中的任务被称为宏任务,它是由浏览器或者Node环境实现的方法,在全局的JS也可以看作是一个宏任务.</p>
+<ul>
+<li>Script(整体代码)</li>
+<li>setTimeout/setInterval(定时任务)</li>
+<li>I/O</li>
+<li>UI交互事件</li>
+<li>postMessage</li>
+<li>MessageChannel</li>
+<li>setImmidate(Node)</li>
+</ul>
+<h4 id="微任务"><a href="#微任务" class="headerlink" title="微任务"></a>微任务</h4><p>由于消息队列中粗时间颗粒度的任务已经不能胜任部分领域的需求,所以微任务应运而生(ES6,ES3之前JS本身没有异步请求能力,不存在微任务,ES5之后引入<code>Promise</code>,JS不需要浏览器也可以发起异步任务),微任务可以在时效性和效率之间做个有效的权衡.每个宏任务都包含一个微任务队列.在当前宏任务的JS快要执行完成时(微任务检查点,JS引擎准备退出全局执行上下文清空执行栈),JS引擎会检查全局执行上下文中的微任务队列,按照顺序执行微任务.如果在执行微任务的过程中产生新的微任务,那么将会将该微任务加入当前微任务队列中,V8引擎会一直循环执行微任务队列中的任务,直到队列为空时才结束(新的微任务不会推迟).<br>由JS引擎提供的方法就属于微任务.</p>
+<ul>
+<li>Promise</li>
+<li>MutationObserver</li>
+<li>process.nextTick(Node)</li>
+</ul>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">zjwgank</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://zjwgank.github.io/2021/03/22/EventLoop/">http://zjwgank.github.io/2021/03/22/EventLoop/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://zjwgank.github.io" target="_blank">Blog for my life</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"></div><div class="post_share"><div class="social-share" data-image="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2021/03/16/JS%E7%BB%A7%E6%89%BF/"><img class="next-cover" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">JS继承</div></div></a></div></nav></div><div class="aside_content" id="aside_content"><div class="card-widget card-info"><div class="card-content"><div class="card-info-avatar is-center"><img class="avatar-img" src="/null" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">zjwgank</div><div class="author-info__description">life work study</div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">11</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a></div></div><div class="card-widget card-announcement"><div class="card-content"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#JS%E6%98%AF%E5%8D%95%E7%BA%BF%E7%A8%8B%E7%9A%84"><span class="toc-number">1.</span> <span class="toc-text">JS是单线程的</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Web-Worker-html5%E6%96%B0%E7%89%B9%E6%80%A7"><span class="toc-number">1.1.</span> <span class="toc-text">Web Worker(html5新特性)</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Service-Worker"><span class="toc-number">1.2.</span> <span class="toc-text">Service Worker</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Event-Loop"><span class="toc-number">2.</span> <span class="toc-text">Event Loop</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%B5%8F%E8%A7%88%E5%99%A8"><span class="toc-number">2.1.</span> <span class="toc-text">浏览器</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Node"><span class="toc-number">2.2.</span> <span class="toc-text">Node</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Event-Loop-1"><span class="toc-number">2.3.</span> <span class="toc-text">Event Loop</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%8F%E4%BB%BB%E5%8A%A1%E5%92%8C%E5%BE%AE%E4%BB%BB%E5%8A%A1"><span class="toc-number">3.</span> <span class="toc-text">宏任务和微任务</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%AE%8F%E4%BB%BB%E5%8A%A1"><span class="toc-number">3.1.</span> <span class="toc-text">宏任务</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%BE%AE%E4%BB%BB%E5%8A%A1"><span class="toc-number">3.2.</span> <span class="toc-text">微任务</span></a></li></ol></li></ol></div></div></div><div class="card-widget card-recent-post"><div class="card-content"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2021/03/22/EventLoop/" title="EventLoop"><img src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="EventLoop"/></a><div class="content"><a class="title" href="/2021/03/22/EventLoop/" title="EventLoop">EventLoop</a><time datetime="2021-03-22T14:18:10.000Z" title="发表于 2021-03-22 22:18:10">2021-03-22</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/03/16/JS%E7%BB%A7%E6%89%BF/" title="JS继承"><img src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="JS继承"/></a><div class="content"><a class="title" href="/2021/03/16/JS%E7%BB%A7%E6%89%BF/" title="JS继承">JS继承</a><time datetime="2021-03-16T15:16:35.000Z" title="发表于 2021-03-16 23:16:35">2021-03-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/03/08/this%E6%8C%87%E5%90%91/" title="this指向"><img src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="this指向"/></a><div class="content"><a class="title" href="/2021/03/08/this%E6%8C%87%E5%90%91/" title="this指向">this指向</a><time datetime="2021-03-08T14:49:05.000Z" title="发表于 2021-03-08 22:49:05">2021-03-08</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/03/06/%E8%B7%A8%E5%9F%9F/" title="跨域"><img src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="跨域"/></a><div class="content"><a class="title" href="/2021/03/06/%E8%B7%A8%E5%9F%9F/" title="跨域">跨域</a><time datetime="2021-03-06T07:48:34.000Z" title="发表于 2021-03-06 15:48:34">2021-03-06</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/03/03/%E5%89%8D%E7%AB%AF%E7%BC%96%E7%A0%81/" title="前端编码"><img src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="前端编码"/></a><div class="content"><a class="title" href="/2021/03/03/%E5%89%8D%E7%AB%AF%E7%BC%96%E7%A0%81/" title="前端编码">前端编码</a><time datetime="2021-03-03T14:41:21.000Z" title="发表于 2021-03-03 22:41:21">2021-03-03</time></div></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By zjwgank</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></div></body></html>
