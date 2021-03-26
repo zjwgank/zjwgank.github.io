@@ -4,6 +4,8 @@ date: 2021-03-22 22:18:10
 tags:
 ---
 
+> 进程是操作系统分配资源和调度任务的基本单位,线程是建立在进程上的一次程序运行单位,一个进程可以有多个线程.
+
 ### JS是单线程的
 
 作为浏览器的脚本语言,JS的主要用途就是操作DOM,以及与用户交互.这就决定了它只能是单线程的.否则会带来很复杂的同步问题.比如JS同时有两个线程,一个线程要在某个DOM节点上添加内容,而另一个线程要删除这个DOM节点,那么浏览器以哪个为准呢.因此JS必须是单线程的,它在同一时间只能做一件事.
@@ -99,3 +101,38 @@ Node中Event Loop分为6个阶段
 - Promise
 - MutationObserver
 - process.nextTick(Node)
+
+```
+console.log('start') // 全局JS,作为宏任务加入到执行栈
+
+setTimeout(() => {
+  console.log('timer1')
+  Promise.resolve().then(function() {
+    console.log('promise1')
+  })
+}, 0) // 定时器任务,推入任务队列(宏任务)
+
+setTimeout(() => {
+  console.log('timer2')
+  Promise.resolve().then(function() {
+    console.log('promise2')
+  })
+}, 0) // 定时器任务,推入任务队列(宏任务)
+
+Promise.resolve().then(function() {
+  console.log('promise3')
+}) // 微任务
+
+console.log('end') // 全局JS,作为宏任务加入到执行栈
+```
+那么这个执行过程为
+
+1. `log('start')`作为全局JS,输出start
+2. `setTimeout`作为定时器任务,将回调函数加入任务队列
+3. `setTimeout`作为定时器任务,将回调函数加入任务队列
+4. `Promise.then`作为微任务,加入微任务队列
+5. `log('end')`作为全局JS,输出end
+6. 执行栈清空,全局JS作为宏任务执行完毕,开始执行微任务队列,此时微任务队列中存在`log('promise3')`
+7. 微任务队列清空,将任务队列事件推入执行栈,判断定时时间开始执行定时事件
+8. 定时事件`log('timer1')`,同时`Promise.then`加入微任务队列,宏任务执行结束,执行微任务,输出promise1
+9. 定时事件`log('timer2')`,同时`Promise.then`加入微任务队列,宏任务执行结束,执行微任务,输出promise2
