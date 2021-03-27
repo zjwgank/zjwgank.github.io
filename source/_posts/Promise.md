@@ -309,7 +309,10 @@ _resolve(val){
       val.then((value) => {
         this.value = value
         fulFn(value)
-      },err => rejFn(err))
+      },err => {
+        this.value = err
+        rejFn(err)
+      })
     }else{
       this.value = value
       fulFn(value)
@@ -323,8 +326,8 @@ _resolve(val){
 
 - resolve
 
-```
-resolve(val){
+```js
+static resolve(val){
   if(val instanceof Promise) return val
   return new Promise(resolve => resolve(val))
 }
@@ -332,25 +335,24 @@ resolve(val){
 
 - reject
 
-```
-reject(val){
-  if(val instanceof Promise) return val
+```js
+static reject(val){
   return new Promise((resolve,reject) => reject(val))
 }
 ```
 
 - catch
 
-```
-catch(onRejected){
+```js
+static catch(onRejected){
   this.then(undefined,onRejected)
 }
 ```
 
 - all
 
-```
-all(list){
+```js
+static all(list){
   return new Promise((resolve,reject) => {
     let reslist = []
     for( let p of list){
@@ -370,7 +372,7 @@ all(list){
 - race
 
 ```
-race(list){
+static race(list){
   return new Promise((resolve,reject) => {
     for(let p of list){
       this.resolve(p).then(res => {
@@ -384,7 +386,7 @@ race(list){
 - finally
 
 ```
-finally(cb){
+static finally(cb){
   return this.then(
     value => Promise.resolve(cb()).then(() => value),
     reason => Promise.resolve(cb()).then(() => throw new Error(reason))
@@ -393,162 +395,148 @@ finally(cb){
 ```
 
 ### 最终产出
-```
+```js
 const pending = 'pending'
 const fulfilled = 'fulfilled'
 const rejected = 'rejected'
 
-class Promise{
-  constructor(executor){
-    if(typeof executor!== 'function') throw new Error('executor must be a function')
+class Promise {
+  constructor(executor) {
+    if (typeof executor !== 'function') throw new Error('executor must be a function')
     this.status = 'pending'
     this.value = undefined
     this.reason = undefined
     this.fulfillQueues = []
     this.rejectQueues = []
-    try{
-      executor(this._resolve.bind(this),this._reject.bind(this))
-    }catch(err){
+    try {
+      executor(this._resolve.bind(this), this._reject.bind(this))
+    } catch (err) {
       this._reject(err)
     }
   }
 
-  _resolve(val){
+  _resolve(val) {
     const run = () => {
-      if(this.status !== pending) return 
+      if (this.status !== pending) return
       this.status = fulfilled
-      const fulFn = (val) =>{
+      const fulFn = (val) => {
         let cb;
-        while(cb = this.fulFullQueues.shift()){
+        while (cb = this.fulfillQueues.shift()) {
           cb(val)
         }
       }
       const rejFn = (err) => {
         let cb;
-        while(cb = this.rejectQueues.shift()){
+        while (cb = this.rejectQueues.shift()) {
           cb(err)
         }
       }
-      if(val instanceof Promise){
-        val.then(value=>{
+      if (val instanceof Promise) {
+        val.then(value => {
           this.value = value
           fulFn(value)
-        },err => rejFn(err))
-      }else{
-        this.value = value
-        fulFn(value)
-      }
-    }
-    setTimeout(run,0)
-  }
-  _reject(err){
-    const run = () => {
-      if(this.status !== pending) return 
-      this.status = rejected
-      const fulFn = (val) => {
-        let cb;
-        while(cb = this.fulFullQueues.shift()){
-          cb(val)
-        }
-      }
-      const rejFn = (err) =>{
-        let cb;
-        while(cb = this.rejectQueues.shift()){
-          cb(err)
-        }
-      }
-      if(err instanceof Promise){
-        err.then((value) => fulFn(value),err => {
-          this.reason = err
+        }, err => {
+          this.value = err
           rejFn(err)
         })
-      }else{
-        this.reason = err
-        rejFn(err)
+      } else {
+        this.value = val
+        fulFn(val)
       }
     }
-    setTimeout(run,0)
+    setTimeout(run, 0)
   }
-  then(onFulFill,onReject){
-    return new Promise((fulNext,rejNext) => {
+  _reject(err) {
+    const run = () => {
+      if (this.status !== pending) return
+      this.status = rejected
+      this.value = err
+      let cb;
+      while (cb = this.rejectQueues.shift()) {
+        cb(err)
+      }
+    }
+    setTimeout(run, 0)
+  }
+  then(onFulFill, onReject) {
+    const { status, value, reason } = this
+    return new Promise((fulNext, rejNext) => {
       const fulFn = (value) => {
-        try{
-          if(typeof onFulFill !== 'function'){
+        try {
+          if (typeof onFulFill !== 'function') {
             fulNext(value)
-          }else{
+          } else {
             const res = onFulFill(value)
-            if(res instanceof Promise){
-              res.then(fulNext,rejNext)
-            }else{
+            if (res instanceof Promise) {
+              res.then(fulNext, rejNext)
+            } else {
               fulNext(value)
             }
           }
-        }catch(err){
+        } catch (err) {
           rejNext(err)
         }
       }
       const rejFn = (err) => {
-        try{
-          if(typeof onReject !== 'function'){
+        try {
+          if (typeof onReject !== 'function') {
             rejNext(err)
-          }else{
+          } else {
             const res = onReject(err)
-            if(res instanceof Promise){
-              res.then(fulNext,rejNext)
-            }else{
-              fulNext(err)
+            if (res instanceof Promise) {
+              res.then(fulNext, rejNext)
+            } else {
+              fulNext(res)
             }
           }
-        }catch(err){
+        } catch (err) {
           rejNext(err)
         }
-        const {status,value,reason} = this
-        switch(status){
-          case 'pending':
-            this.fulFullQueues.push(fulFn)
-            this.rejectQueues.push(rejFn)
-            break;
-          case 'fulfilled':
-            fulFn(value)
-            break;
-          case 'rejected':
-            rejFn(value)
-            break;
-        }
+      }
+      switch (status) {
+        case 'pending':
+          this.fulfillQueues.push(fulFn)
+          this.rejectQueues.push(rejFn)
+          break;
+        case 'fulfilled':
+          fulFn(value)
+          break;
+        case 'rejected':
+          rejFn(reason)
+          break;
       }
     })
   }
-  resolve(val){
-    if(val instanceof Promise) return val
+  static resolve(val) {
+    if (val instanceof Promise) return val
     return new Promise((resolve) => resolve(val))
   }
-  reject(err){
-    if(err instanceof Promise) return err
-    return new Promise((resolve,reject) => reject(err))
+  static reject(err) {
+    return new Promise((resolve, reject) => reject(err))
   }
-  catch(cb){
-    return this.then(undefined,cb)
+  static catch(cb) {
+    return this.then(undefined, cb)
   }
-  all(list){
-    return new Promise((resolve,reject) => {
+  static all(list) {
+    return new Promise((resolve, reject) => {
       const reslist = []
-      for(let p of list){
-        this.resolve(p).then(value => reslist.push(value),err => reject(err))
+      for (let p of list) {
+        this.resolve(p).then(value => reslist.push(value), err => reject(err))
       }
-      if(reslist.length === list.length) resolve(reslist)
+      if (reslist.length === list.length) resolve(reslist)
     })
   }
-  race(list){
-    return new Promise((resolve,reject) => {
-      for(let p of list){
-        this.resolve(p).then(value => resolve(value),err=> reject(err))
+  static race(list) {
+    return new Promise((resolve, reject) => {
+      for (let p of list) {
+        this.resolve(p).then(value => resolve(value), err => reject(err))
       }
     })
   }
-  finally(cb){
+  static finally(cb) {
     return this.then(
-      value => Promise.resolve(cb()).then(() => value)
-      err => Promise.resolve(cb()).then(() => throw new Error(err))
+      value => Promise.resolve(cb()).then(() => value),
+      err => Promise.resolve(cb()).then(() => { throw new Error(err) })
     )
   }
 }
