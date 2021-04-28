@@ -4,7 +4,7 @@ date: 2021-04-27 22:19:18
 tags:
 ---
 ```js
-// 替换Web环境下的Directives,Components
+// 替换Web环境下的Directives
 extend(Vue.options.directives,platformDirectives)
 ```
 
