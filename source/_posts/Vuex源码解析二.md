@@ -85,6 +85,7 @@ class ModuleCollection{
     let module = this.root
     return path.reduce((namespace,key) =>{
       module = module.getChild(key)
+      // 根据根节点+子节点组合mutation
       return namespace + (module.namespaced ? key + '/' : '')
     },'')
   }
@@ -227,6 +228,7 @@ class Module{
     this.state = (typeof rawState === 'function' ? rawState() : rawState) || {}
   }
   get namespaced(){
+    // 设置子模块的namespaced
     return !!this._rawModule.namespaced
   }
   // 为模块添加子节点
