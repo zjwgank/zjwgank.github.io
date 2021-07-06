@@ -45,6 +45,17 @@ module.exports = axios
 module.exports.default = axios
 ```
 
+#### spread
+
+```js
+// 闭包处理
+function spread(callback){
+  return function wrap(arr){
+    return callback.apply(null,arr)
+  }
+}
+```
+
 #### createInstance
 
 ```js
